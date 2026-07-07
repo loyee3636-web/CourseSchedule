@@ -1,0 +1,20 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "entry"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "entryAbility"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "CourseSchedule"
+    },
+    {
+      "name": "notification_permission_reason",
+      "value": "用于发送上课提醒与课程变更通知"
+    }
+  ]
+}
