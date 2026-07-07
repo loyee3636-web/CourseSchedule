@@ -9,13 +9,20 @@ import { CourseEdit } from './CourseEdit';
 import { Settings } from './Settings';
 import promptAction from '@ohos.promptAction';
 
+// 页面枚举
+type PageType = 'home' | 'edit' | 'detail' | 'settings';
+
 @Entry
 @Component
 struct Index {
-  @State pathStack: NavPathStack = new NavPathStack();
+  @State currentPage: PageType = 'home';
   @State settings: AppSettings | null = null;
   @State courseList: Course[] = [];
   @State viewMode: string = 'week';
+
+  // 跳转传参用的状态
+  @State editMode: string = 'add';
+  @State targetCourseId: number = 0;
 
   private weekDataSource: CourseDataSource = new CourseDataSource([]);
   private dayDataSource: CourseDataSource = new CourseDataSource([]);
@@ -41,66 +48,33 @@ struct Index {
 
   // 跳转课程详情
   goToDetail(courseId: number): void {
-    const param: Record<string, Object> = {} as Record<string, Object>;
-    param['courseId'] = courseId as Object;
-    this.pathStack.pushPathByName('CourseDetail', param);
+    this.targetCourseId = courseId;
+    this.currentPage = 'detail';
   }
 
   // 跳转新增课程
   goToAddCourse(): void {
-    const param: Record<string, Object> = {} as Record<string, Object>;
-    param['mode'] = 'add' as Object;
-    this.pathStack.pushPathByName('CourseEdit', param);
+    this.editMode = 'add';
+    this.targetCourseId = 0;
+    this.currentPage = 'edit';
+  }
+
+  // 跳转编辑课程
+  goToEditCourse(courseId: number): void {
+    this.editMode = 'edit';
+    this.targetCourseId = courseId;
+    this.currentPage = 'edit';
   }
 
   // 跳转设置页
   goToSettings(): void {
-    const param: Record<string, Object> = {} as Record<string, Object>;
-    param['onSettingsChanged'] = ((): void => {
-      this.refreshData();
-    }) as Object;
-    this.pathStack.pushPathByName('Settings', param);
+    this.currentPage = 'settings';
   }
 
-  // 编辑课程回调
-  onEditCourse(id: number): void {
-    const editParam: Record<string, Object> = {} as Record<string, Object>;
-    editParam['mode'] = 'edit' as Object;
-    editParam['courseId'] = id as Object;
-    this.pathStack.replacePathByName('CourseEdit', editParam);
-  }
-
-  // 路由构建器：纯UI语法，无逻辑变量
-  @Builder
-  RouteMap(name: string, param: Object) {
-    if (name === 'CourseDetail') {
-      NavDestination() {
-        CourseDetail({
-          courseId: (param as Record<string, Object>)['courseId'] as number,
-          onBack: (): void => { this.pathStack.pop(); },
-          onEdit: (id: number): void => { this.onEditCourse(id); }
-        })
-      }
-    } else if (name === 'CourseEdit') {
-      NavDestination() {
-        CourseEdit({
-          mode: (param as Record<string, Object>)['mode'] as string,
-          courseId: (param as Record<string, Object>)['courseId'] as number,
-          onSaved: (): void => {
-            this.refreshData();
-            this.pathStack.pop();
-          },
-          onBack: (): void => { this.pathStack.pop(); }
-        })
-      }
-    } else if (name === 'Settings') {
-      NavDestination() {
-        Settings({
-          onBack: (): void => { this.pathStack.pop(); },
-          onSettingsChanged: (param as Record<string, Object>)['onSettingsChanged'] as () => void
-        })
-      }
-    }
+  // 返回首页
+  backToHome(): void {
+    this.currentPage = 'home';
+    this.refreshData();
   }
 
   // 顶部栏
@@ -254,25 +228,59 @@ struct Index {
     .border({ width: { top: 1 }, color: '#EEEEEE' })
   }
 
-  build() {
-    Navigation(this.pathStack) {
-      Column() {
-        this.TopBar()
-        if (this.settings !== null) {
-          if (this.viewMode === 'week') {
-            this.WeekView()
-          } else {
-            this.DayView()
-          }
+  // 首页内容
+  @Builder
+  HomePage() {
+    Column() {
+      this.TopBar()
+      if (this.settings !== null) {
+        if (this.viewMode === 'week') {
+          this.WeekView()
+        } else {
+          this.DayView()
         }
-        this.BottomBar()
       }
-      .width('100%')
-      .height('100%')
-      .backgroundColor('#F5F7FA')
+      this.BottomBar()
     }
-    .hideTitleBar(true)
-    .navDestination(this.RouteMap.bind(this))
-    .backgroundColor('#FFFFFF')
+    .width('100%')
+    .height('100%')
+    .backgroundColor('#F5F7FA')
+  }
+
+  build() {
+    // 根据当前状态渲染对应页面
+    if (this.currentPage === 'home') {
+      this.HomePage()
+    } else if (this.currentPage === 'edit') {
+      CourseEdit({
+        mode: this.editMode,
+        courseId: this.targetCourseId,
+        onSaved: (): void => {
+          this.backToHome();
+        },
+        onBack: (): void => {
+          this.backToHome();
+        }
+      })
+    } else if (this.currentPage === 'detail') {
+      CourseDetail({
+        courseId: this.targetCourseId,
+        onBack: (): void => {
+          this.backToHome();
+        },
+        onEdit: (id: number): void => {
+          this.goToEditCourse(id);
+        }
+      })
+    } else if (this.currentPage === 'settings') {
+      Settings({
+        onBack: (): void => {
+          this.backToHome();
+        },
+        onSettingsChanged: (): void => {
+          this.refreshData();
+        }
+      })
+    }
   }
 }
