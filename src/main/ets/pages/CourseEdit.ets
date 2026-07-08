@@ -28,7 +28,7 @@ export struct CourseEdit {
   @State showSheet: boolean = false;
   @State sheetType: string = '';
 
-  private dayNameArr: string[] = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+  private dayNameArr: string[] = ['一', '二', '三', '四', '五', '六', '日'];
   private sectionArr: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
   aboutToAppear(): void {
