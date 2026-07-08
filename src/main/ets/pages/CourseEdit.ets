@@ -25,10 +25,8 @@ export struct CourseEdit {
     isRemind: true
   };
 
-  // 弹窗控制
-  @State showDaySheet: boolean = false;
-  @State showStartSectionSheet: boolean = false;
-  @State showEndSectionSheet: boolean = false;
+  @State showSheet: boolean = false;
+  @State sheetType: string = '';
 
   private dayNameArr: string[] = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
   private sectionArr: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -39,13 +37,22 @@ export struct CourseEdit {
 
   async initData(): Promise<void> {
     this.settings = await PreferencesUtil.getInstance().getSettings();
-    this.form.semester = this.settings!.currentSemester;
-
     let weekArr: number[] = [];
     for (let i: number = 1; i <= 16; i++) {
       weekArr.push(i);
     }
-    this.form.weekList = weekArr;
+    this.form = {
+      id: 0,
+      name: '',
+      teacher: '',
+      classroom: '',
+      semester: this.settings!.currentSemester,
+      dayOfWeek: 1,
+      startSection: 1,
+      endSection: 2,
+      weekList: weekArr,
+      isRemind: true
+    };
 
     if (this.mode === 'edit' && this.courseId > 0) {
       let course: Course | null = await CourseDb.getInstance().getCourseById(this.courseId);
@@ -70,276 +77,362 @@ export struct CourseEdit {
     this.onSaved();
   }
 
-  // 选择星期
-  selectDay(day: number): void {
-    this.form.dayOfWeek = day;
-    this.showDaySheet = false;
+  onSelectDay(index: number): void {
+    let newForm: Course = {
+      id: this.form.id,
+      name: this.form.name,
+      teacher: this.form.teacher,
+      classroom: this.form.classroom,
+      semester: this.form.semester,
+      dayOfWeek: index + 1,
+      startSection: this.form.startSection,
+      endSection: this.form.endSection,
+      weekList: this.form.weekList,
+      isRemind: this.form.isRemind
+    };
+    this.form = newForm;
+    this.showSheet = false;
   }
 
-  // 选择开始节次
-  selectStartSection(section: number): void {
-    this.form.startSection = section;
-    // 仅当结束节次小于开始时，自动拉齐，不会主动同步
-    if (this.form.endSection < section) {
-      this.form.endSection = section;
+  onSelectStartSection(section: number): void {
+    let newEnd: number = this.form.endSection;
+    if (newEnd < section) {
+      newEnd = section;
     }
-    this.showStartSectionSheet = false;
+    let newForm: Course = {
+      id: this.form.id,
+      name: this.form.name,
+      teacher: this.form.teacher,
+      classroom: this.form.classroom,
+      semester: this.form.semester,
+      dayOfWeek: this.form.dayOfWeek,
+      startSection: section,
+      endSection: newEnd,
+      weekList: this.form.weekList,
+      isRemind: this.form.isRemind
+    };
+    this.form = newForm;
+    this.showSheet = false;
   }
 
-  // 选择结束节次
-  selectEndSection(section: number): void {
-    this.form.endSection = section;
-    this.showEndSectionSheet = false;
+  onSelectEndSection(section: number): void {
+    let newForm: Course = {
+      id: this.form.id,
+      name: this.form.name,
+      teacher: this.form.teacher,
+      classroom: this.form.classroom,
+      semester: this.form.semester,
+      dayOfWeek: this.form.dayOfWeek,
+      startSection: this.form.startSection,
+      endSection: section,
+      weekList: this.form.weekList,
+      isRemind: this.form.isRemind
+    };
+    this.form = newForm;
+    this.showSheet = false;
   }
 
-  // 星期选择弹窗
   @Builder
-  DaySheetBuilder() {
+  SheetBuilder() {
     Column() {
-      Text('选择星期')
-        .fontSize(18)
-        .fontWeight(FontWeight.Medium)
-        .margin({ top: 16, bottom: 12 })
-
-      ForEach(this.dayNameArr, (item: string, index: number) => {
-        Button(item)
-          .type(ButtonType.Normal)
-          .backgroundColor(this.form.dayOfWeek === index + 1 ? '#2E7D32' : '#F5F7FA')
-          .fontColor(this.form.dayOfWeek === index + 1 ? '#FFFFFF' : '#333333')
-          .width('90%')
-          .height(44)
-          .margin({ bottom: 8 })
-          .onClick(() => {
-            this.selectDay(index + 1);
-          })
-      }, (item: string, index: number): string => index.toString())
-    }
-    .width('100%')
-    .height(360)
-    .backgroundColor('#FFFFFF')
-    .borderRadius({ topLeft: 16, topRight: 16 })
-  }
-
-  // 开始节次选择弹窗
-  @Builder
-  StartSectionSheetBuilder() {
-    Column() {
-      Text('选择开始节次')
-        .fontSize(18)
-        .fontWeight(FontWeight.Medium)
-        .margin({ top: 16, bottom: 12 })
+      if (this.sheetType === 'day') {
+        Text('选择星期')
+          .fontSize(18)
+          .fontWeight(FontWeight.Medium)
+          .margin({ top: 16, bottom: 12 });
+      } else if (this.sheetType === 'start') {
+        Text('选择开始节次')
+          .fontSize(18)
+          .fontWeight(FontWeight.Medium)
+          .margin({ top: 16, bottom: 12 });
+      } else if (this.sheetType === 'end') {
+        Text('选择结束节次')
+          .fontSize(18)
+          .fontWeight(FontWeight.Medium)
+          .margin({ top: 16, bottom: 12 });
+      }
 
       Scroll() {
         Column() {
-          ForEach(this.sectionArr, (item: number) => {
-            Button('第' + item + '节')
-              .type(ButtonType.Normal)
-              .backgroundColor(this.form.startSection === item ? '#2E7D32' : '#F5F7FA')
-              .fontColor(this.form.startSection === item ? '#FFFFFF' : '#333333')
-              .width('90%')
-              .height(44)
-              .margin({ bottom: 8 })
-              .onClick(() => {
-                this.selectStartSection(item);
-              })
-          }, (item: number): string => item.toString())
+          if (this.sheetType === 'day') {
+            ForEach(this.dayNameArr, (item: string, index: number) => {
+              Button(item)
+                .type(ButtonType.Normal)
+                .backgroundColor(this.form.dayOfWeek === index + 1 ? '#2E7D32' : '#F5F7FA')
+                .fontColor(this.form.dayOfWeek === index + 1 ? '#FFFFFF' : '#333333')
+                .width('90%')
+                .height(44)
+                .margin({ bottom: 8 })
+                .onClick(() => {
+                  this.onSelectDay(index);
+                });
+            }, (item: string, index: number): string => index.toString());
+          } else {
+            ForEach(this.sectionArr, (item: number) => {
+              Button('第' + item + '节')
+                .type(ButtonType.Normal)
+                .backgroundColor(
+                  this.sheetType === 'end' && item < this.form.startSection
+                    ? '#EEEEEE'
+                    : (this.sheetType === 'start' && this.form.startSection === item)
+                    || (this.sheetType === 'end' && this.form.endSection === item)
+                    ? '#2E7D32'
+                    : '#F5F7FA'
+                )
+                .fontColor(
+                  this.sheetType === 'end' && item < this.form.startSection
+                    ? '#CCCCCC'
+                    : (this.sheetType === 'start' && this.form.startSection === item)
+                    || (this.sheetType === 'end' && this.form.endSection === item)
+                    ? '#FFFFFF'
+                    : '#333333'
+                )
+                .width('90%')
+                .height(44)
+                .margin({ bottom: 8 })
+                .enabled(!(this.sheetType === 'end' && item < this.form.startSection))
+                .onClick(() => {
+                  if (this.sheetType === 'start') {
+                    this.onSelectStartSection(item);
+                  } else {
+                    this.onSelectEndSection(item);
+                  }
+                });
+            }, (item: number): string => item.toString());
+          }
         }
-        .width('100%')
+        .width('100%');
       }
       .layoutWeight(1)
-      .scrollBar(BarState.Off)
+      .scrollBar(BarState.Off);
     }
     .width('100%')
     .height(400)
     .backgroundColor('#FFFFFF')
-    .borderRadius({ topLeft: 16, topRight: 16 })
-  }
-
-  // 结束节次选择弹窗
-  @Builder
-  EndSectionSheetBuilder() {
-    Column() {
-      Text('选择结束节次')
-        .fontSize(18)
-        .fontWeight(FontWeight.Medium)
-        .margin({ top: 16, bottom: 12 })
-
-      Scroll() {
-        Column() {
-          ForEach(this.sectionArr, (item: number) => {
-            // 结束节次必须 >= 开始节次，小于的禁用
-            Button('第' + item + '节')
-              .type(ButtonType.Normal)
-              .backgroundColor(item < this.form.startSection ? '#EEEEEE' :
-                (this.form.endSection === item ? '#2E7D32' : '#F5F7FA'))
-              .fontColor(item < this.form.startSection ? '#CCCCCC' :
-                (this.form.endSection === item ? '#FFFFFF' : '#333333'))
-              .width('90%')
-              .height(44)
-              .margin({ bottom: 8 })
-              .enabled(item >= this.form.startSection)
-              .onClick(() => {
-                this.selectEndSection(item);
-              })
-          }, (item: number): string => item.toString())
-        }
-        .width('100%')
-      }
-      .layoutWeight(1)
-      .scrollBar(BarState.Off)
-    }
-    .width('100%')
-    .height(400)
-    .backgroundColor('#FFFFFF')
-    .borderRadius({ topLeft: 16, topRight: 16 })
-  }
-
-  @Builder
-  FormRow(label: string, value: string, onClick: () => void) {
-    Button() {
-      Row() {
-        Text(label)
-          .fontSize(15)
-          .fontColor('#666666')
-        Blank()
-        Text(value)
-          .fontSize(15)
-          .fontColor('#333333')
-        Text(' >')
-          .fontSize(15)
-          .fontColor('#999999')
-      }
-      .width('100%')
-    }
-    .type(ButtonType.Normal)
-    .backgroundColor('#FFFFFF')
-    .width('100%')
-    .height(56)
-    .border({ width: { bottom: 1 }, color: '#EEEEEE' })
-    .onClick(onClick)
+    .borderRadius({ topLeft: 16, topRight: 16 });
   }
 
   build() {
     Column() {
-      // 顶部返回栏
       Row() {
         Text('← 返回')
           .fontSize(16)
           .fontColor('#2E7D32')
           .onClick(() => {
             this.onBack();
-          })
-        Blank()
+          });
+        Blank();
         Text(this.mode === 'add' ? '新增课程' : '编辑课程')
           .fontSize(18)
-          .fontWeight(FontWeight.Medium)
-        Blank()
+          .fontWeight(FontWeight.Medium);
+        Blank();
         Text('保存')
           .fontSize(16)
           .fontColor('#2E7D32')
           .onClick(() => {
             this.saveCourse();
-          })
+          });
       }
       .width('100%')
       .height(56)
       .padding({ left: 16, right: 16 })
-      .backgroundColor('#FFFFFF')
+      .backgroundColor('#FFFFFF');
 
-      // 表单区域
       Column() {
-        // 课程名称
         Row() {
           Text('课程名称')
             .fontSize(15)
             .fontColor('#666666')
-            .width(80)
+            .width(80);
           TextInput({ text: this.form.name })
             .layoutWeight(1)
             .height(40)
             .onChange((val: string) => {
-              this.form.name = val;
-            })
+              let newForm: Course = {
+                id: this.form.id,
+                name: val,
+                teacher: this.form.teacher,
+                classroom: this.form.classroom,
+                semester: this.form.semester,
+                dayOfWeek: this.form.dayOfWeek,
+                startSection: this.form.startSection,
+                endSection: this.form.endSection,
+                weekList: this.form.weekList,
+                isRemind: this.form.isRemind
+              };
+              this.form = newForm;
+            });
         }
         .padding(16)
         .width('100%')
         .backgroundColor('#FFFFFF')
-        .border({ width: { bottom: 1 }, color: '#EEEEEE' })
+        .border({ width: { bottom: 1 }, color: '#EEEEEE' });
 
-        // 授课教师
         Row() {
           Text('授课教师')
             .fontSize(15)
             .fontColor('#666666')
-            .width(80)
+            .width(80);
           TextInput({ text: this.form.teacher })
             .layoutWeight(1)
             .height(40)
             .onChange((val: string) => {
-              this.form.teacher = val;
-            })
+              let newForm: Course = {
+                id: this.form.id,
+                name: this.form.name,
+                teacher: val,
+                classroom: this.form.classroom,
+                semester: this.form.semester,
+                dayOfWeek: this.form.dayOfWeek,
+                startSection: this.form.startSection,
+                endSection: this.form.endSection,
+                weekList: this.form.weekList,
+                isRemind: this.form.isRemind
+              };
+              this.form = newForm;
+            });
         }
         .padding(16)
         .width('100%')
         .backgroundColor('#FFFFFF')
-        .border({ width: { bottom: 1 }, color: '#EEEEEE' })
+        .border({ width: { bottom: 1 }, color: '#EEEEEE' });
 
-        // 上课教室
         Row() {
           Text('上课教室')
             .fontSize(15)
             .fontColor('#666666')
-            .width(80)
+            .width(80);
           TextInput({ text: this.form.classroom })
             .layoutWeight(1)
             .height(40)
             .onChange((val: string) => {
-              this.form.classroom = val;
-            })
+              let newForm: Course = {
+                id: this.form.id,
+                name: this.form.name,
+                teacher: this.form.teacher,
+                classroom: val,
+                semester: this.form.semester,
+                dayOfWeek: this.form.dayOfWeek,
+                startSection: this.form.startSection,
+                endSection: this.form.endSection,
+                weekList: this.form.weekList,
+                isRemind: this.form.isRemind
+              };
+              this.form = newForm;
+            });
         }
         .padding(16)
         .width('100%')
         .backgroundColor('#FFFFFF')
+        .border({ width: { bottom: 1 }, color: '#EEEEEE' });
+
+        Button() {
+          Row() {
+            Text('星期')
+              .fontSize(15)
+              .fontColor('#666666');
+            Blank();
+            Text(this.dayNameArr[this.form.dayOfWeek - 1])
+              .fontSize(15)
+              .fontColor('#333333');
+            Text(' >')
+              .fontSize(15)
+              .fontColor('#999999');
+          }
+          .width('100%');
+        }
+        .type(ButtonType.Normal)
+        .backgroundColor('#FFFFFF')
+        .width('100%')
+        .height(56)
         .border({ width: { bottom: 1 }, color: '#EEEEEE' })
+        .onClick(() => {
+          this.sheetType = 'day';
+          this.showSheet = true;
+        });
 
-        // 星期选择
-        this.FormRow('星期', this.dayNameArr[this.form.dayOfWeek - 1], () => {
-          this.showDaySheet = true;
-        })
+        Button() {
+          Row() {
+            Text('开始节次')
+              .fontSize(15)
+              .fontColor('#666666');
+            Blank();
+            Text('第' + this.form.startSection + '节')
+              .fontSize(15)
+              .fontColor('#333333');
+            Text(' >')
+              .fontSize(15)
+              .fontColor('#999999');
+          }
+          .width('100%');
+        }
+        .type(ButtonType.Normal)
+        .backgroundColor('#FFFFFF')
+        .width('100%')
+        .height(56)
+        .border({ width: { bottom: 1 }, color: '#EEEEEE' })
+        .onClick(() => {
+          this.sheetType = 'start';
+          this.showSheet = true;
+        });
 
-        // 开始节次选择
-        this.FormRow('开始节次', '第' + this.form.startSection + '节', () => {
-          this.showStartSectionSheet = true;
-        })
+        Button() {
+          Row() {
+            Text('结束节次')
+              .fontSize(15)
+              .fontColor('#666666');
+            Blank();
+            Text('第' + this.form.endSection + '节')
+              .fontSize(15)
+              .fontColor('#333333');
+            Text(' >')
+              .fontSize(15)
+              .fontColor('#999999');
+          }
+          .width('100%');
+        }
+        .type(ButtonType.Normal)
+        .backgroundColor('#FFFFFF')
+        .width('100%')
+        .height(56)
+        .border({ width: { bottom: 1 }, color: '#EEEEEE' })
+        .onClick(() => {
+          this.sheetType = 'end';
+          this.showSheet = true;
+        });
 
-        // 结束节次选择
-        this.FormRow('结束节次', '第' + this.form.endSection + '节', () => {
-          this.showEndSectionSheet = true;
-        })
-
-        // 上课提醒
         Row() {
           Text('上课提醒')
             .fontSize(15)
-            .fontColor('#666666')
-          Blank()
+            .fontColor('#666666');
+          Blank();
           Toggle({ type: ToggleType.Switch, isOn: this.form.isRemind })
             .onChange((val: boolean) => {
-              this.form.isRemind = val;
-            })
+              let newForm: Course = {
+                id: this.form.id,
+                name: this.form.name,
+                teacher: this.form.teacher,
+                classroom: this.form.classroom,
+                semester: this.form.semester,
+                dayOfWeek: this.form.dayOfWeek,
+                startSection: this.form.startSection,
+                endSection: this.form.endSection,
+                weekList: this.form.weekList,
+                isRemind: val
+              };
+              this.form = newForm;
+            });
         }
         .padding(16)
         .width('100%')
-        .backgroundColor('#FFFFFF')
+        .backgroundColor('#FFFFFF');
       }
       .width('100%')
-      .margin({ top: 12 })
+      .margin({ top: 12 });
     }
     .width('100%')
     .height('100%')
     .backgroundColor('#F5F7FA')
-    .bindSheet($$this.showDaySheet, this.DaySheetBuilder)
-    .bindSheet($$this.showStartSectionSheet, this.StartSectionSheetBuilder)
-    .bindSheet($$this.showEndSectionSheet, this.EndSectionSheetBuilder)
+    .bindSheet($$this.showSheet, this.SheetBuilder);
   }
 }

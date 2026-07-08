@@ -20,32 +20,29 @@ export struct CourseCard {
 
   build() {
     Column() {
-      // 第一行：课程名称
       Text(this.course.name)
         .fontSize(14)
         .fontWeight(FontWeight.Medium)
         .fontColor('#FFFFFF')
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
+        .width('100%');
 
-      // 第二行：教室
       if (this.course.classroom !== '') {
         Text(this.course.classroom)
           .fontSize(12)
           .fontColor('#FFFFFF')
           .opacity(0.9)
           .width('100%')
-          .margin({ top: 4 })
+          .margin({ top: 4 });
       }
 
-      // 第三行：节次
       Text('第' + this.course.startSection + '-' + this.course.endSection + '节')
         .fontSize(11)
         .fontColor('#FFFFFF')
         .opacity(0.8)
         .width('100%')
-        .margin({ top: 4 })
+        .margin({ top: 4 });
     }
     .width('100%')
     .padding(8)
@@ -54,6 +51,6 @@ export struct CourseCard {
     .alignItems(HorizontalAlign.Start)
     .onClick(() => {
       this.onItemClick();
-    })
+    });
   }
 }
