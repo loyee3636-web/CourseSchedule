@@ -19,7 +19,6 @@ struct Index {
   @State settings: AppSettings | null = null;
   @State courseList: Course[] = [];
   @State viewMode: string = 'week';
-
   // 跳转传参用的状态
   @State editMode: string = 'add';
   @State targetCourseId: number = 0;
@@ -34,12 +33,16 @@ struct Index {
       this.courseList = await CourseDb.getInstance()
         .getCoursesBySemester(this.settings.currentSemester);
       this.weekDataSource.updateData(this.courseList);
-
       const today: number = new Date().getDay();
       const dayOfWeek: number = today === 0 ? 7 : today;
       const todayCourses: Course[] = this.courseList.filter((c: Course): boolean => c.dayOfWeek === dayOfWeek);
       this.dayDataSource.updateData(todayCourses);
     }
+  }
+
+  private getRowsTemplate(): string {
+    const sectionCount: number = this.settings !== null ? this.settings.sectionList.length : 10;
+    return `auto ${Array(sectionCount).fill('1fr').join(' ')}`;
   }
 
   aboutToAppear(): void {
@@ -86,7 +89,6 @@ struct Index {
         .fontWeight(FontWeight.Bold)
         .width('100%')
         .margin({ bottom: 12 })
-
       Row() {
         Text(this.settings !== null ? this.settings.currentSemester : '')
           .fontSize(16)
@@ -94,9 +96,7 @@ struct Index {
           .onClick((): void => {
             promptAction.showToast({ message: '学期切换在设置页操作' });
           })
-
         Blank()
-
         Button(this.viewMode === 'week' ? '切日视图' : '切周视图')
           .type(ButtonType.Normal)
           .backgroundColor('#2E7D32')
@@ -113,42 +113,45 @@ struct Index {
     .backgroundColor('#FFFFFF')
   }
 
-  // 周视图
+  // 周视图 - 修复：网格布局按节次精准定位
   @Builder
   WeekView() {
+
     Grid() {
+      // 星期标题行
       ForEach([1, 2, 3, 4, 5, 6, 7], (day: number) => {
         GridItem() {
-          Column() {
-            Text(this.dayNameArr[day - 1])
-              .fontSize(14)
-              .fontWeight(FontWeight.Medium)
-              .margin({ bottom: 8 })
-
-            List() {
-              LazyForEach(this.weekDataSource, (item: Course) => {
-                ListItem() {
-                  if (item.dayOfWeek === day) {
-                    CourseCard({
-                      course: item,
-                      sectionList: this.settings !== null ? this.settings.sectionList : [],
-                      onItemClick: (): void => {
-                        this.goToDetail(item.id);
-                      }
-                    })
-                      .margin({ bottom: 6 })
-                  }
-                }
-              }, (item: Course): string => item.id.toString())
-            }
-            .layoutWeight(1)
-          }
-          .width('100%')
-          .padding(6)
+          Text(this.dayNameArr[day - 1])
+            .fontSize(14)
+            .fontWeight(FontWeight.Medium)
+            .textAlign(TextAlign.Center)
+            .width('100%')
+            .padding({ top: 8, bottom: 8 })
         }
+        .columnStart(day)
+        .rowStart(1) // 强制所有星期标题都在第1行
       }, (day: number): string => day.toString())
+
+      // 课程卡片 - 按节次定位行位置
+      LazyForEach(this.weekDataSource, (item: Course) => {
+        GridItem() {
+          CourseCard({
+            course: item,
+            sectionList: this.settings !== null ? this.settings.sectionList : [],
+            onItemClick: (): void => {
+              this.goToDetail(item.id);
+            }
+          })
+            .margin(2)
+            .height('100%')
+        }
+        .columnStart(item.dayOfWeek)
+        .rowStart(item.startSection + 1)
+        .rowEnd(item.endSection + 1)
+      }, (item: Course): string => item.id.toString())
     }
     .columnsTemplate('1fr 1fr 1fr 1fr 1fr 1fr 1fr')
+    .rowsTemplate(this.getRowsTemplate())
     .width('100%')
     .layoutWeight(1)
     .padding({ left: 8, right: 8, bottom: 8 })
@@ -163,7 +166,6 @@ struct Index {
         .fontWeight(FontWeight.Bold)
         .width('100%')
         .padding({ left: 16, top: 12, bottom: 12 })
-
       List() {
         LazyForEach(this.dayDataSource, (item: Course) => {
           ListItem() {
