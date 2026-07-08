@@ -16,31 +16,11 @@ export struct CourseCard {
     isRemind: true
   };
   sectionList: SectionItem[] = [];
-  onItemClick?: () => void;
-
-  getTimeText(): string {
-    if (this.sectionList.length === 0) {
-      return '';
-    }
-    let startTime: string = '';
-    let endTime: string = '';
-    for (let i: number = 0; i < this.sectionList.length; i++) {
-      const item: SectionItem = this.sectionList[i];
-      if (item.section === this.course.startSection) {
-        startTime = item.startTime;
-      }
-      if (item.section === this.course.endSection) {
-        endTime = item.endTime;
-      }
-    }
-    if (startTime.length > 0 && endTime.length > 0) {
-      return startTime + '-' + endTime;
-    }
-    return '';
-  }
+  onItemClick: () => void = () => {};
 
   build() {
     Column() {
+      // 第一行：课程名称
       Text(this.course.name)
         .fontSize(14)
         .fontWeight(FontWeight.Medium)
@@ -49,18 +29,18 @@ export struct CourseCard {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
 
-      if (this.course.classroom.length > 0) {
+      // 第二行：教室
+      if (this.course.classroom !== '') {
         Text(this.course.classroom)
           .fontSize(12)
           .fontColor('#FFFFFF')
           .opacity(0.9)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
           .width('100%')
           .margin({ top: 4 })
       }
 
-      Text(this.getTimeText())
+      // 第三行：节次
+      Text('第' + this.course.startSection + '-' + this.course.endSection + '节')
         .fontSize(11)
         .fontColor('#FFFFFF')
         .opacity(0.8)
@@ -72,10 +52,8 @@ export struct CourseCard {
     .backgroundColor('#2E7D32')
     .borderRadius(6)
     .alignItems(HorizontalAlign.Start)
-    .onClick((): void => {
-      if (this.onItemClick !== undefined) {
-        this.onItemClick();
-      }
+    .onClick(() => {
+      this.onItemClick();
     })
   }
 }
