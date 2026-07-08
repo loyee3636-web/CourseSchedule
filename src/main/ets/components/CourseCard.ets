@@ -4,18 +4,39 @@ import { SectionItem } from '../model/AppSettings';
 @Component
 export struct CourseCard {
   course: Course = {
-    id: 0, name: '', teacher: '', classroom: '', semester: '',
-    dayOfWeek: 1, startSection: 1, endSection: 1, weekList: [], isRemind: false
+    id: 0,
+    name: '',
+    teacher: '',
+    classroom: '',
+    semester: '',
+    dayOfWeek: 1,
+    startSection: 1,
+    endSection: 2,
+    weekList: [],
+    isRemind: true
   };
   sectionList: SectionItem[] = [];
   onItemClick?: () => void;
 
-  private getTimeText(): string {
-    const startItem: SectionItem | undefined = this.sectionList[this.course.startSection - 1];
-    const endItem: SectionItem | undefined = this.sectionList[this.course.endSection - 1];
-    const start: string = startItem ? startItem.startTime : '';
-    const end: string = endItem ? endItem.endTime : '';
-    return start + '-' + end;
+  getTimeText(): string {
+    if (this.sectionList.length === 0) {
+      return '';
+    }
+    let startTime: string = '';
+    let endTime: string = '';
+    for (let i: number = 0; i < this.sectionList.length; i++) {
+      const item: SectionItem = this.sectionList[i];
+      if (item.section === this.course.startSection) {
+        startTime = item.startTime;
+      }
+      if (item.section === this.course.endSection) {
+        endTime = item.endTime;
+      }
+    }
+    if (startTime.length > 0 && endTime.length > 0) {
+      return startTime + '-' + endTime;
+    }
+    return '';
   }
 
   build() {
@@ -28,23 +49,30 @@ export struct CourseCard {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
 
-      Text(this.course.classroom)
-        .fontSize(12)
-        .fontColor('#FFFFFF')
-        .opacity(0.9)
-        .margin({ top: 4 })
+      if (this.course.classroom.length > 0) {
+        Text(this.course.classroom)
+          .fontSize(12)
+          .fontColor('#FFFFFF')
+          .opacity(0.9)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
+          .margin({ top: 4 })
+      }
 
       Text(this.getTimeText())
         .fontSize(11)
         .fontColor('#FFFFFF')
         .opacity(0.8)
-        .margin({ top: 2 })
+        .width('100%')
+        .margin({ top: 4 })
     }
     .width('100%')
     .padding(8)
-    .borderRadius(8)
-    .backgroundColor('#4CAF50')
-    .onClick(() => {
+    .backgroundColor('#2E7D32')
+    .borderRadius(6)
+    .alignItems(HorizontalAlign.Start)
+    .onClick((): void => {
       if (this.onItemClick !== undefined) {
         this.onItemClick();
       }
